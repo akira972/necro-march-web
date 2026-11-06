@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Necro March">
+    <meta name="theme-color" content="#120e18">
+    <title>Necro March build 0</title>
+    <link rel="manifest" href="manifest.webmanifest?v=0">
+    <link rel="icon" type="image/png" href="TemplateData/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="TemplateData/icons/icon-192.png">
+    <style>
+      html, body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: #120e18; overflow: hidden;
+        touch-action: none; overscroll-behavior: none;
+        -webkit-user-select: none; user-select: none;
+        -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+      }
+      #unity-canvas {
+        position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
+        display: block; background: #120e18; outline: none; touch-action: none;
+      }
+      #loading {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 24px;
+        background: #120e18; color: #d9cdf2;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        transition: opacity .3s;
+      }
+      #loading h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: .08em; }
+      #bar { width: 60vw; max-width: 320px; height: 8px; border-radius: 4px; background: #2a2238; overflow: hidden; }
+      #bar-fill { width: 0; height: 100%; background: #8a5cd6; transition: width .2s; }
+      #version { font-size: 12px; opacity: .5; }
+      #message { position: fixed; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0); padding: 12px;
+        font: 14px system-ui, sans-serif; color: #fff; text-align: center; display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loading">
+      <h1>Necro March</h1>
+      <div id="bar"><div id="bar-fill"></div></div>
+      <div id="version">build 0</div>
+    </div>
+    <div id="message"></div>
+    <script>
+      var version = "0";
+      var v = "?v=" + encodeURIComponent(version);
+      var canvas = document.getElementById("unity-canvas");
+      var loading = document.getElementById("loading");
+      var barFill = document.getElementById("bar-fill");
+      var message = document.getElementById("message");
+
+      // Pas de menu contextuel ni de zoom au double appui sur le jeu.
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+
+      function showBanner(msg, type) {
+        message.textContent = msg;
+        message.style.background = type == "error" ? "#a01c2c" : "#5a4a10";
+        message.style.display = "block";
+        if (type != "error") setTimeout(function () { message.style.display = "none"; }, 5000);
+      }
+
+      var buildUrl = "Build";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/Web.data.unityweb" + v,
+        frameworkUrl: buildUrl + "/Web.framework.js.unityweb" + v,
+        codeUrl: buildUrl + "/Web.wasm.unityweb" + v,
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Necro March",
+        productVersion: version,
+        showBanner: showBanner,
+        // Écrans très denses : on plafonne à 2 pour garder 60 images/s.
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      };
+
+      var script = document.createElement("script");
+      script.src = buildUrl + "/Web.loader.js" + v;
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          barFill.style.width = (100 * progress) + "%";
+        }).then(function () {
+          loading.style.opacity = "0";
+          setTimeout(function () { loading.style.display = "none"; }, 300);
+        }).catch(function (err) {
+          showBanner(String(err), "error");
+        });
+      };
+      script.onerror = function () { showBanner("Build introuvable : " + script.src, "error"); };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
