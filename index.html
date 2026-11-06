@@ -61,7 +61,8 @@
         (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
       if (standalone) document.documentElement.classList.add("standalone");
 
-      // Relevé temporaire (10 s après le chargement) pour régler l'affichage sur téléphone.
+      // Relevé temporaire (rafraîchi chaque seconde pendant 15 s) pour régler l'affichage sur téléphone.
+      var diagTicks = 0;
       function showDiag() {
         var d = document.getElementById("diag");
         var probe = document.createElement("div");
@@ -76,7 +77,8 @@
           " · fenêtre " + window.innerWidth + "×" + window.innerHeight +
           " · haut " + top + (standalone ? " · accueil" : "");
         d.style.display = "block";
-        setTimeout(function () { d.style.display = "none"; }, 10000);
+        if (++diagTicks < 15) setTimeout(showDiag, 1000);
+        else d.style.display = "none";
       }
 
       var version = "1";
