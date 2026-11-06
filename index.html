@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Necro March">
     <meta name="theme-color" content="#120e18">
-    <title>Necro March build 0</title>
-    <link rel="manifest" href="manifest.webmanifest?v=0">
+    <title>Necro March build 1</title>
+    <link rel="manifest" href="manifest.webmanifest?v=1">
     <link rel="icon" type="image/png" href="TemplateData/icons/icon-192.png">
     <link rel="apple-touch-icon" href="TemplateData/icons/icon-192.png">
     <style>
@@ -35,6 +35,14 @@
       #bar { width: 60vw; max-width: 320px; height: 8px; border-radius: 4px; background: #2a2238; overflow: hidden; }
       #bar-fill { width: 0; height: 100%; background: #8a5cd6; transition: width .2s; }
       #version { font-size: 12px; opacity: .5; }
+      /* iOS, lancé depuis l'écran d'accueil avec la barre d'état transparente : la fenêtre
+         est trop courte de la hauteur de la barre d'état, ce qui laisse une bande en bas. */
+      .standalone #unity-canvas, .standalone #loading {
+        bottom: auto; height: calc(100vh + env(safe-area-inset-top, 0px));
+      }
+      #diag { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+        font: 11px ui-monospace, monospace; color: #d9cdf2; text-align: center; opacity: .8;
+        pointer-events: none; display: none; }
       #message { position: fixed; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0); padding: 12px;
         font: 14px system-ui, sans-serif; color: #fff; text-align: center; display: none; }
     </style>
@@ -44,11 +52,34 @@
     <div id="loading">
       <h1>Necro March</h1>
       <div id="bar"><div id="bar-fill"></div></div>
-      <div id="version">build 0</div>
+      <div id="version">build 1</div>
     </div>
     <div id="message"></div>
+    <div id="diag"></div>
     <script>
-      var version = "0";
+      var standalone = window.navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+      if (standalone) document.documentElement.classList.add("standalone");
+
+      // Relevé temporaire (10 s après le chargement) pour régler l'affichage sur téléphone.
+      function showDiag() {
+        var d = document.getElementById("diag");
+        var probe = document.createElement("div");
+        probe.style.cssText = "position:fixed;top:0;height:env(safe-area-inset-top,0px);";
+        document.body.appendChild(probe);
+        var top = probe.offsetHeight;
+        document.body.removeChild(probe);
+        d.textContent = "dpr " + (window.devicePixelRatio || 1) +
+          " · rendu " + canvas.width + "×" + canvas.height +
+          " · affiché " + canvas.clientWidth + "×" + canvas.clientHeight +
+          " · écran " + screen.width + "×" + screen.height +
+          " · fenêtre " + window.innerWidth + "×" + window.innerHeight +
+          " · haut " + top + (standalone ? " · accueil" : "");
+        d.style.display = "block";
+        setTimeout(function () { d.style.display = "none"; }, 10000);
+      }
+
+      var version = "1";
       var v = "?v=" + encodeURIComponent(version);
       var canvas = document.getElementById("unity-canvas");
       var loading = document.getElementById("loading");
@@ -89,6 +120,7 @@
         }).then(function () {
           loading.style.opacity = "0";
           setTimeout(function () { loading.style.display = "none"; }, 300);
+          setTimeout(showDiag, 1000);
         }).catch(function (err) {
           showBanner(String(err), "error");
         });
