@@ -41,7 +41,7 @@
       #version { font-size: 12px; opacity: .5; }
       /* iPhone lancé depuis l'écran d'accueil (barre d'état transparente) : iOS peut donner une
          fenêtre plus courte que l'écran et y couper les éléments « fixed » (bande vide en bas).
-         Le jeu y est placé en absolu ; fitIosHomeScreen() allonge le document du manque mesuré. */
+         Le jeu y est placé en absolu ; fitIosHomeScreen() donne au document la hauteur de l'écran. */
       .ios-home body { position: relative; }
       .ios-home #unity-canvas, .ios-home #loading {
         position: absolute; top: 0; left: 0; right: 0; bottom: auto; height: 100%;
@@ -80,22 +80,26 @@
       var lang = /^fr/i.test(navigator.language || "") ? "fr" : "en";
       document.getElementById("rotate-text").textContent = TEXTS[lang].rotate;
 
-      // iPhone depuis l'écran d'accueil : si la fenêtre est plus courte que l'écran, on comble
-      // le manque mesuré (rien sinon). Android et les navigateurs ne sont pas concernés.
+      // iPhone depuis l'écran d'accueil : iOS donne parfois une fenêtre plus courte que l'écran,
+      // même après le chargement et sans prévenir la page (bande vide en bas). Le document prend
+      // donc toujours la hauteur de l'écran, sans attendre de mesurer un manque ; le jeu y est
+      // placé en absolu. Android et les navigateurs ne sont pas concernés.
       var iosHome = window.navigator.standalone === true;
       function fitIosHomeScreen() {
         var root = document.documentElement;
-        root.style.height = "";
         var portrait = window.matchMedia("(orientation: portrait)").matches;
         var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-        if (window.innerHeight < full) root.style.height = full + "px";
-        root.style.setProperty("--app-h", Math.max(window.innerHeight, full) + "px");
+        var h = Math.max(window.innerHeight, full);
+        root.style.height = h + "px";
+        root.style.setProperty("--app-h", h + "px");
       }
       if (iosHome) {
         document.documentElement.classList.add("ios-home");
         fitIosHomeScreen();
         window.addEventListener("resize", fitIosHomeScreen);
         window.addEventListener("orientationchange", function () { setTimeout(fitIosHomeScreen, 300); });
+        window.addEventListener("pageshow", fitIosHomeScreen);
+        document.addEventListener("visibilitychange", fitIosHomeScreen);
       }
 
       // Densité de rendu : celle de l'écran, plafonnée à ×3 et à 4 millions de pixels (les plus
