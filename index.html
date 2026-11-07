@@ -35,12 +35,11 @@
       #bar { width: 60vw; max-width: 320px; height: 8px; border-radius: 4px; background: #2a2238; overflow: hidden; }
       #bar-fill { width: 0; height: 100%; background: #8a5cd6; transition: width .2s; }
       #version { font-size: 12px; opacity: .5; }
-      /* iOS, lancé depuis l'écran d'accueil avec la barre d'état transparente : la fenêtre
-         est trop courte de la hauteur de la barre d'état et un élément « fixed » y est coupé,
-         ce qui laisse une bande en bas. On allonge le document et on y place le jeu en absolu. */
-      html.standalone { height: calc(100% + env(safe-area-inset-top, 0px)); }
-      .standalone body { position: relative; }
-      .standalone #unity-canvas, .standalone #loading {
+      /* iPhone lancé depuis l'écran d'accueil (barre d'état transparente) : iOS peut donner une
+         fenêtre plus courte que l'écran et y couper les éléments « fixed » (bande vide en bas).
+         Le jeu y est placé en absolu ; fitIosHomeScreen() allonge le document du manque mesuré. */
+      .ios-home body { position: relative; }
+      .ios-home #unity-canvas, .ios-home #loading {
         position: absolute; top: 0; left: 0; right: 0; bottom: auto; width: 100%; height: 100%;
       }
       #diag { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
@@ -62,7 +61,32 @@
     <script>
       var standalone = window.navigator.standalone === true ||
         (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
-      if (standalone) document.documentElement.classList.add("standalone");
+
+      // iPhone depuis l'écran d'accueil : si la fenêtre est plus courte que l'écran, on comble
+      // le manque mesuré (rien sinon). Android et les navigateurs ne sont pas concernés.
+      var iosHome = window.navigator.standalone === true;
+      function fitIosHomeScreen() {
+        var root = document.documentElement;
+        root.style.height = "";
+        var portrait = window.matchMedia("(orientation: portrait)").matches;
+        var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+        if (window.innerHeight < full) root.style.height = full + "px";
+      }
+      if (iosHome) {
+        document.documentElement.classList.add("ios-home");
+        fitIosHomeScreen();
+        window.addEventListener("resize", fitIosHomeScreen);
+        window.addEventListener("orientationchange", function () { setTimeout(fitIosHomeScreen, 300); });
+      }
+
+      // Densité de rendu : celle de l'écran, plafonnée à ×3 et à environ 3,7 millions de pixels
+      // (un iPhone Pro Max en ×3) : certains Android sont en ×4 et les tablettes très grandes.
+      var MAX_PIXEL_RATIO = 3, MAX_RENDER_PIXELS = 3.7e6;
+      function renderPixelRatio() {
+        var dpr = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+        var area = Math.max(window.innerWidth * window.innerHeight, 1);
+        return Math.min(dpr, Math.max(1, Math.sqrt(MAX_RENDER_PIXELS / area)));
+      }
 
       // Relevé temporaire (rafraîchi chaque seconde pendant 15 s) pour régler l'affichage sur téléphone.
       var diagTicks = 0;
@@ -114,9 +138,9 @@
         productName: "Necro March",
         productVersion: version,
         showBanner: showBanner,
-        // Pleine densité de l'écran (×3 sur iPhone) : textes et interface nets. Si les images/s
-        // baissent, c'est la 3D qu'on allège avec le renderScale d'URP (PLAN B.6), pas l'interface.
-        devicePixelRatio: window.devicePixelRatio || 1,
+        // Interface nette sur tous les écrans ; si les images/s baissent, c'est la 3D qu'on
+        // allège avec le renderScale d'URP (PLAN B.6), pas l'interface.
+        devicePixelRatio: renderPixelRatio(),
       };
 
       var script = document.createElement("script");
