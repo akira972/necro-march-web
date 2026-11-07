@@ -20,8 +20,12 @@
         -webkit-user-select: none; user-select: none;
         -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
       }
+      /* Le jeu reste en portrait : sur un écran large (ordinateur, tablette couchée), il s'affiche
+         en colonne centrée de format 3:4 au plus (MAX_ASPECT plus bas) ; les côtés gardent le fond. */
       #unity-canvas {
-        position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
+        position: fixed; top: 0; bottom: 0; left: 0; right: 0; margin: 0 auto;
+        width: 100vw; width: min(100vw, calc(var(--app-h, 100dvh) * 0.75));
+        height: 100vh; height: 100dvh;
         display: block; background: #120e18; outline: none; touch-action: none;
       }
       #loading {
@@ -40,7 +44,19 @@
          Le jeu y est placé en absolu ; fitIosHomeScreen() allonge le document du manque mesuré. */
       .ios-home body { position: relative; }
       .ios-home #unity-canvas, .ios-home #loading {
-        position: absolute; top: 0; left: 0; right: 0; bottom: auto; width: 100%; height: 100%;
+        position: absolute; top: 0; left: 0; right: 0; bottom: auto; height: 100%;
+      }
+      .ios-home #loading { width: 100%; }
+      /* Téléphone couché (écran tactile peu haut) : on demande de le redresser. */
+      #rotate { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column;
+        align-items: center; justify-content: center; gap: 20px; padding: 24px;
+        background: #120e18; color: #d9cdf2; text-align: center;
+        font: 18px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      #rotate-phone { width: 34px; height: 58px; border: 3px solid #8a5cd6; border-radius: 8px;
+        animation: rotate-hint 1.8s ease-in-out infinite; }
+      @keyframes rotate-hint { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0deg); } }
+      @media (orientation: landscape) and (pointer: coarse) and (max-height: 540px) {
+        #rotate { display: flex; }
       }
       #diag { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
         font: 11px ui-monospace, monospace; color: #d9cdf2; text-align: center; opacity: .8;
@@ -58,7 +74,16 @@
     </div>
     <div id="message"></div>
     <div id="diag"></div>
+    <div id="rotate"><div id="rotate-phone"></div><div id="rotate-text"></div></div>
     <script>
+      // Textes de la page (le jeu a sa propre table de traduction).
+      var TEXTS = {
+        fr: { rotate: "Redresse ton téléphone pour jouer" },
+        en: { rotate: "Turn your phone upright to play" }
+      };
+      var lang = /^fr/i.test(navigator.language || "") ? "fr" : "en";
+      document.getElementById("rotate-text").textContent = TEXTS[lang].rotate;
+
       var standalone = window.navigator.standalone === true ||
         (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
 
@@ -71,6 +96,7 @@
         var portrait = window.matchMedia("(orientation: portrait)").matches;
         var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
         if (window.innerHeight < full) root.style.height = full + "px";
+        root.style.setProperty("--app-h", Math.max(window.innerHeight, full) + "px");
       }
       if (iosHome) {
         document.documentElement.classList.add("ios-home");
@@ -79,12 +105,14 @@
         window.addEventListener("orientationchange", function () { setTimeout(fitIosHomeScreen, 300); });
       }
 
-      // Densité de rendu : celle de l'écran, plafonnée à ×3 et à environ 3,7 millions de pixels
-      // (un iPhone Pro Max en ×3) : certains Android sont en ×4 et les tablettes très grandes.
-      var MAX_PIXEL_RATIO = 3, MAX_RENDER_PIXELS = 3.7e6;
+      // Densité de rendu : celle de l'écran, plafonnée à ×3 et à 4 millions de pixels (les plus
+      // grands iPhone restent nets en ×3) : certains Android sont en ×4 et les tablettes très grandes.
+      // MAX_ASPECT = largeur max / hauteur du jeu (même 0.75 que dans le CSS de #unity-canvas).
+      var MAX_PIXEL_RATIO = 3, MAX_RENDER_PIXELS = 4e6, MAX_ASPECT = 0.75;
       function renderPixelRatio() {
         var dpr = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-        var area = Math.max(window.innerWidth * window.innerHeight, 1);
+        var h = window.innerHeight, w = Math.min(window.innerWidth, h * MAX_ASPECT);
+        var area = Math.max(w * h, 1);
         return Math.min(dpr, Math.max(1, Math.sqrt(MAX_RENDER_PIXELS / area)));
       }
 
