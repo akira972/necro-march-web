@@ -117,6 +117,21 @@
       }
 
       // Relevé temporaire (rafraîchi chaque seconde pendant 15 s) pour régler l'affichage sur téléphone.
+      // Note aussi les tailles de dessin qu'Unity demande à WebGL (« écran » = image finale, « cible » =
+      // image intermédiaire) : si elles sont plus petites que le rendu, l'image est étirée donc floue.
+      var drawSizes = {};
+      (function () {
+        var P = window.WebGL2RenderingContext && WebGL2RenderingContext.prototype;
+        if (!P) return;
+        var viewport = P.viewport, bindFramebuffer = P.bindFramebuffer, toScreen = true;
+        P.bindFramebuffer = function (target, fb) { toScreen = !fb; return bindFramebuffer.apply(this, arguments); };
+        P.viewport = function (x, y, w, h) { drawSizes[(toScreen ? "écran " : "cible ") + w + "×" + h] = 1; return viewport.apply(this, arguments); };
+        var blit = P.blitFramebuffer;
+        P.blitFramebuffer = function (sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1) {
+          drawSizes["copie " + (sx1 - sx0) + "×" + (sy1 - sy0) + "→" + (dx1 - dx0) + "×" + (dy1 - dy0)] = 1;
+          return blit.apply(this, arguments);
+        };
+      })();
       var diagTicks = 0;
       function showDiag() {
         var d = document.getElementById("diag");
@@ -125,13 +140,16 @@
         document.body.appendChild(probe);
         var top = probe.offsetHeight;
         document.body.removeChild(probe);
+        var gl = canvas.getContext("webgl2");
         d.textContent = "dpr " + (window.devicePixelRatio || 1) +
           " · rendu " + canvas.width + "×" + canvas.height +
           " · affiché " + canvas.clientWidth + "×" + canvas.clientHeight +
           " · écran " + screen.width + "×" + screen.height +
           " · fenêtre " + window.innerWidth + "×" + window.innerHeight +
           " · haut " + top + " · bas " + Math.round(canvas.getBoundingClientRect().bottom) +
-          (standalone ? " · accueil" : "");
+          (standalone ? " · accueil" : "") +
+          " · tampon " + (gl ? gl.drawingBufferWidth + "×" + gl.drawingBufferHeight : "?") +
+          " · dessin " + Object.keys(drawSizes).join(", ");
         d.style.display = "block";
         if (++diagTicks < 15) setTimeout(showDiag, 1000);
         else d.style.display = "none";
