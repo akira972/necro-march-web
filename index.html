@@ -153,7 +153,7 @@
       }
       var diagTicks = 0;
       function showDiag() {
-        showRuler(diagTicks < 14);
+        showRuler(true);
         var d = document.getElementById("diag");
         var probe = document.createElement("div");
         probe.style.cssText = "position:fixed;top:0;height:env(safe-area-inset-top,0px);";
@@ -161,7 +161,7 @@
         var top = probe.offsetHeight;
         document.body.removeChild(probe);
         var gl = canvas.getContext("webgl2");
-        d.textContent = "dpr " + (window.devicePixelRatio || 1) +
+        d.textContent = "page R2 · dpr " + (window.devicePixelRatio || 1) +
           " · rendu " + canvas.width + "×" + canvas.height +
           " · affiché " + canvas.clientWidth + "×" + canvas.clientHeight +
           " · écran " + screen.width + "×" + screen.height +
