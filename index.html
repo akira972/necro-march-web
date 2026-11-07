@@ -61,6 +61,9 @@
       #diag { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
         font: 11px ui-monospace, monospace; color: #d9cdf2; text-align: center; opacity: .8;
         pointer-events: none; display: none; }
+      #ruler { position: fixed; top: 0; left: 0; width: 100px; height: 100%; pointer-events: none; display: none; z-index: 5; }
+      #ruler div { position: absolute; left: 4px; transform: translateY(-50%);
+        font: 600 14px system-ui, -apple-system, sans-serif; color: #d9cdf2; white-space: nowrap; }
       #message { position: fixed; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0); padding: 12px;
         font: 14px system-ui, sans-serif; color: #fff; text-align: center; display: none; }
     </style>
@@ -74,6 +77,7 @@
     </div>
     <div id="message"></div>
     <div id="diag"></div>
+    <div id="ruler"></div>
     <div id="rotate"><div id="rotate-phone"></div><div id="rotate-text"></div></div>
     <script>
       // Textes de la page (le jeu a sa propre table de traduction).
@@ -132,8 +136,24 @@
           return blit.apply(this, arguments);
         };
       })();
+      // Règle temporaire : textes de la page à plusieurs hauteurs (en points depuis le haut) pour
+      // mesurer jusqu'où l'effet de bord d'iOS 26 floute le haut de l'écran.
+      var RULER_HEIGHTS = [50, 66, 82, 98, 114, 130, 150, 170, 190, 210, 240, 270];
+      function showRuler(visible) {
+        var r = document.getElementById("ruler");
+        if (visible && !r.firstChild) {
+          RULER_HEIGHTS.forEach(function (h) {
+            var t = document.createElement("div");
+            t.style.top = h + "px";
+            t.textContent = "— " + h + " Necro";
+            r.appendChild(t);
+          });
+        }
+        r.style.display = visible ? "block" : "none";
+      }
       var diagTicks = 0;
       function showDiag() {
+        showRuler(diagTicks < 14);
         var d = document.getElementById("diag");
         var probe = document.createElement("div");
         probe.style.cssText = "position:fixed;top:0;height:env(safe-area-inset-top,0px);";
